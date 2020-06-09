@@ -63,6 +63,6 @@ cb = function (p, l, pred; doplot = true)
     return false
 end
 
-pstart = DiffEqFlux.sciml_train(loss_neuralode, pstart, ADAM(0.05), cb = cb, maxiters = 10000).minimizer
+pstart = DiffEqFlux.sciml_train(loss_neuralode, p, ADAM(0.05), cb = cb, maxiters = 10000).minimizer
 
 pmin = DiffEqFlux.sciml_train(loss_neuralode, pstart, cb = cb, Optim.KrylovTrustRegion(), maxiters = 100)
