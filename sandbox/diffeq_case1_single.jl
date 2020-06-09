@@ -1,30 +1,27 @@
 using DiffEqFlux, OrdinaryDiffEq, Flux, Optim, Plots
 
 function trueODEfunc(dydt, y, k, t)
-    dydt[1] = -2 * k[1] * y[1]^2 - k[2] * y[1]
-    dydt[2] = k[1] * y[1]^2 - k[4] * y[2] * y[4]
-    dydt[3] = k[2] * y[1] - k[3] * y[3]
-    dydt[4] = k[3] * y[3] - k[4] * y[2] * y[4]
-    dydt[5] = k[4] * y[2] * y[4]
+    dydt[1] = -2 * k[1] * y[1]^2
+    dydt[2] = k[1] * y[1]^2
 end
 
-u0 = Float64[1.0;1.0;0.0;0.0;0.0]
-datasize = 200
+u0 = Float64[1.0;0.0]
+datasize = 100
 tspan = Float64[0.0, 20.0]
 tsteps = range(tspan[1], tspan[2], length = datasize)
 
-k = Float64[0.1, 0.2, 0.13, 0.3]
+k = Float64[0.1]
 alg = Rosenbrock23(autodiff = false)
 
 prob_trueode = ODEProblem(trueODEfunc, u0, tspan, k)
 ode_data = Array(solve(prob_trueode, alg, saveat = tsteps))
 
 dudt2 = FastChain((x, p)->log.(clamp.(x, 1e-30, 10)),
-                  FastDense(5, 4, exp),
-                  FastDense(4, 5))
+                  FastDense(2, 1, exp),
+                  FastDense(1, 2))
 
 prob_neuralode = NeuralODE(dudt2, tspan, alg, saveat = tsteps)
-prob_neuralode.p[1:20] .= clamp.(prob_neuralode.p[1:20], 0, 2)
+prob_neuralode.p[1:2] .= clamp.(prob_neuralode.p[1:2], 0, 2)
 p = prob_neuralode.p
 
 function predict_neuralode(p)
@@ -43,7 +40,7 @@ iter = 0
 cb = function (p, l, pred; doplot = true)
     global list_plots, iter
 
-    p[1:20] .= clamp.(p[1:20], 0, 2)
+    p[1:2] .= clamp.(p[1:2], 0, 2)
 
     if iter == 0
         list_plots = []

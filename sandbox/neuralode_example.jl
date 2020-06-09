@@ -29,7 +29,7 @@ end
 # Callback function to observe training
 list_plots = []
 iter = 0
-cb = function (p, l, pred; doplot = false)
+cb = function (p, l, pred; doplot = true)
     global list_plots, iter
 
     if iter == 0
