@@ -39,8 +39,12 @@ end
 # Callback function to observe training
 list_plots = []
 iter = 1
+track_loss = []
 cb = function (p, l, pred; doplot = false, save_file = true)
-    global list_plots, iter
+    global list_plots, iter, track_loss
+
+    push!(track_loss, l)
+    p0 = plot(iter, track_loss)
 
     # plot current prediction against data
     p1 = scatter(tsteps, ode_data[1,:], label = "data")
@@ -58,6 +62,7 @@ cb = function (p, l, pred; doplot = false, save_file = true)
     end
     if save_file
         savefig(plt,"y_t.png")
+        savefig(p0, "loss.png")
     end
 
     iter += 1
@@ -78,7 +83,9 @@ p_second_1 = DiffEqFlux.sciml_train(loss_neuralode, p3, cb = cb, Optim.KrylovTru
 p_another = DiffEqFlux.sciml_train(loss_neuralode, p, ADAM(0.01), cb = cb, maxiters = 2000).minimizer
 "
 
-p1 = DiffEqFlux.sciml_train(loss_neuralode, p0, ADAM(0.01), cb = cb, maxiters = 100).minimizer
+p1 = DiffEqFlux.sciml_train(loss_neuralode, p0, ADAM(0.01), cb = cb, maxiters = 2000).minimizer
+"
 p2 = DiffEqFlux.sciml_train(loss_neuralode, p1, ADAM(0.1), cb = cb, maxiters = 1000).minimizer
 p3 = DiffEqFlux.sciml_train(loss_neuralode, p2, ADAM(0.01), cb = cb, maxiters = 1000).minimizer
+""
 
