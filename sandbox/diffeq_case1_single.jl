@@ -5,8 +5,8 @@ function trueODEfunc(dydt, y, k, t)
     dydt[2] = k[1] * y[1]^2
 end
 
-u0 = Float64[1.0;0.5]
-datasize = 20
+u0 = Float64[1.0;0.0]
+datasize = 40
 tspan = Float64[0.0, 20.0]
 tsteps = range(tspan[1], tspan[2], length = datasize)
 
@@ -30,7 +30,7 @@ p[6] = 0
 p[7] = 0
 
 function predict_neuralode(p)
-    return clamp.(Array(prob_neuralode(u0, p)), 0, ub)
+    return clamp.(Array(prob_neuralode(u0, p)), -ub, ub)
 end
 
 function loss_neuralode(p)
