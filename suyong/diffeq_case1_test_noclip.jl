@@ -1,4 +1,4 @@
-using DiffEqFlux, OrdinaryDiffEq, Flux, Optim, Plots
+using DiffEqFlux, OrdinaryDiffEq, Flux, Optim, Plots, JLD
 
 function trueODEfunc(dydt, y, k, t)
     dydt[1] = -2 * k[1] * y[1]^2 - k[2] * y[1]
@@ -29,7 +29,7 @@ p0 = prob_neuralode.p
 function predict_neuralode(p)
     Array(prob_neuralode(u0, p))
 end
-  
+
 function loss_neuralode(p)
     pred = predict_neuralode(p)
     loss = sum(abs2, ode_data .- pred)
@@ -43,49 +43,48 @@ track_loss = []
 cb = function (p, l, pred; doplot = false, save_file = true)
     global list_plots, iter, track_loss
 
-    push!(track_loss, l)
-    p0 = plot(iter, track_loss)
+    append!(track_loss, l)
 
     # plot current prediction against data
-    p1 = scatter(tsteps, ode_data[1,:], label = "data")
-    scatter!(p1, tsteps, pred[1,:], label = "prediction")
-    p2 = scatter(tsteps, ode_data[2,:], label = "data")
-    scatter!(p2, tsteps, pred[2,:], label = "prediction")
-    p3 = scatter(tsteps, ode_data[3,:], label = "data")
-    scatter!(p3, tsteps, pred[3,:], label = "prediction")
-    p4 = scatter(tsteps, ode_data[4,:], label = "data")
-    scatter!(p4, tsteps, pred[4,:], label = "prediction")
-    plt = plot(p1,p2,p3,p4,layout=(2,2))
+    plt0 = plot(track_loss, yscale = :log10)
+    plt1 = scatter(tsteps, ode_data[1,:], label = "data")
+    scatter!(plt1, tsteps, pred[1,:], label = "prediction")
+    plt2 = scatter(tsteps, ode_data[2,:])
+    scatter!(plt2, tsteps, pred[2,:])
+    plt3 = scatter(tsteps, ode_data[3,:])
+    scatter!(plt3, tsteps, pred[3,:])
+    plt4 = scatter(tsteps, ode_data[4,:])
+    scatter!(plt4, tsteps, pred[4,:])
+    plt5 = scatter(tsteps, ode_data[5,:])
+    scatter!(plt5, tsteps, pred[5,:])
+    plt = plot(plt0, plt1, plt2, plt3, plt4, plt5, layout=(2,3))
     push!(list_plots, plt)
+
     if doplot
         display(plot(plt))
     end
+    
     if save_file
-        savefig(plt,"y_t.png")
-        savefig(p0, "loss.png")
+        savefig(plt,"Results_loss_y_t.png")
     end
 
     iter += 1
     return false
 end
 
-"
-pstart = DiffEqFlux.sciml_train(loss_neuralode, p, ADAM(1), cb = cb, maxiters = 100).minimizer
+p_iter = []
+p_temp = DiffEqFlux.sciml_train(loss_neuralode, p0, ADAM(0.01), cb = cb, maxiters = 2000).minimizer
+push!(p_iter, p_temp)
 
-p1 = DiffEqFlux.sciml_train(loss_neuralode, p, ADAM(0.1), cb = cb, maxiters = 100).minimizer
-p2 = DiffEqFlux.sciml_train(loss_neuralode, p1, ADAM(0.1), cb = cb, maxiters = 100).minimizer
-p2_2 = DiffEqFlux.sciml_train(loss_neuralode, p1, ADAM(0.01), cb = cb, maxiters = 100).minimizer
-p2_3 = DiffEqFlux.sciml_train(loss_neuralode, p1, ADAM(0.01), cb = cb, maxiters = 1000).minimizer
-p3 = DiffEqFlux.sciml_train(loss_neuralode, p2_3, ADAM(0.01), cb = cb, maxiters = 1000).minimizer
+for i in 2:10
+    p_temp = DiffEqFlux.sciml_train(loss_neuralode, p_iter[i-1], ADAM(0.01), cb = cb, maxiters = 1000).minimizer
+    push!(p_iter, p_temp)
+end
 
-p_second_1 = DiffEqFlux.sciml_train(loss_neuralode, p3, cb = cb, Optim.KrylovTrustRegion(), maxiters = 100)
+for i in 11:15
+    p_temp = DiffEqFlux.sciml_train(loss_neuralode, p_iter[i-1], ADAM(0.01), cb = cb, maxiters = 1000).minimizer
+    push!(p_iter, p_temp)
+end
 
-p_another = DiffEqFlux.sciml_train(loss_neuralode, p, ADAM(0.01), cb = cb, maxiters = 2000).minimizer
-"
-
-p1 = DiffEqFlux.sciml_train(loss_neuralode, p0, ADAM(0.01), cb = cb, maxiters = 2000).minimizer
-"
-p2 = DiffEqFlux.sciml_train(loss_neuralode, p1, ADAM(0.1), cb = cb, maxiters = 1000).minimizer
-p3 = DiffEqFlux.sciml_train(loss_neuralode, p2, ADAM(0.01), cb = cb, maxiters = 1000).minimizer
-""
-
+save("CRNN.jld", "p_iter", p_iter)
+# CRNN = load("CRNN.jld")
