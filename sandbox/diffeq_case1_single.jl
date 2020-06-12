@@ -6,7 +6,7 @@ function trueODEfunc(dydt, y, k, t)
 end
 
 u0 = Float64[1.0;0.5]
-datasize = 100
+datasize = 20
 tspan = Float64[0.0, 20.0]
 tsteps = range(tspan[1], tspan[2], length = datasize)
 
@@ -16,7 +16,10 @@ alg = Rosenbrock23(autodiff = false)
 prob_trueode = ODEProblem(trueODEfunc, u0, tspan, k)
 ode_data = Array(solve(prob_trueode, alg, saveat = tsteps))
 
-dudt2 = FastChain((x, p)->log.(clamp.(x, 1e-20, 10)),
+lb = 1e-5
+ub = 10.0
+
+dudt2 = FastChain((x, p)->log.(clamp.(x, lb, ub)),
                   FastDense(2, 1, exp),
                   FastDense(1, 2))
 
@@ -27,7 +30,7 @@ p[6] = 0
 p[7] = 0
 
 function predict_neuralode(p)
-    Array(prob_neuralode(u0, p))
+    return clamp.(Array(prob_neuralode(u0, p)), 0, ub)
 end
 
 function loss_neuralode(p)
@@ -38,6 +41,7 @@ end
 
 # Callback function to observe training
 list_plots = []
+list_loss = []
 iter = 0
 cb = function (p, l, pred; doplot = true)
     global list_plots, iter
@@ -46,14 +50,12 @@ cb = function (p, l, pred; doplot = true)
     p[6] = 0
     p[7] = 0
 
-    display(iter)
-    display(l)
-    display(p)
-
     if iter == 0
         list_plots = []
     end
     iter += 1
+
+    push!(list_loss, l)
 
     # plot current prediction against data
     plt = scatter(tsteps, ode_data[1,:], label = "data1")
@@ -61,16 +63,27 @@ cb = function (p, l, pred; doplot = true)
     scatter!(plt, tsteps, ode_data[2,:], label = "data2")
     plot!(plt, tsteps, pred[2,:], label = "prediction2")
 
+    if iter < 2000
+        plt_loss = plot(list_loss, yscale = :log10, label="loss")
+    else
+        plt_loss = plot(list_loss, xscale = :log10, yscale = :log10, label="loss")
+    end
+
+    plt_all = plot(plt, plt_loss, layout = 2, legend = true)
+
     #push!(list_plots, plt)
-    if doplot & iter % 100 == 0
-        display(plot(plt))
+    if doplot & (iter % 1000 == 0)
+        display(plt_all)
+        display(iter)
+        display(l)
+        display(p)
     end
 
     return false
 end
 
-pstart = DiffEqFlux.sciml_train(loss_neuralode, p, ADAM(0.001), cb = cb, maxiters = 10000).minimizer
+pstart = DiffEqFlux.sciml_train(loss_neuralode, p, ADAM(0.01), cb = cb, maxiters = 100000).minimizer
 
-pstart = DiffEqFlux.sciml_train(loss_neuralode, p, ADAM(0.001), cb = cb, maxiters = 1000).minimizer
+#pstart = DiffEqFlux.sciml_train(loss_neuralode, pstart, ADAM(0.001), cb = cb, maxiters = 100000).minimizer
 
-pmin = DiffEqFlux.sciml_train(loss_neuralode, p, cb = cb, Optim.KrylovTrustRegion(), maxiters = 100)
+#pmin = DiffEqFlux.sciml_train(loss_neuralode, pstart, cb = cb, Optim.KrylovTrustRegion(), maxiters = 10000)
