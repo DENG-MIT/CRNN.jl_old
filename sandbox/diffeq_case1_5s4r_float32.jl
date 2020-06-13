@@ -1,6 +1,11 @@
 using DiffEqFlux, OrdinaryDiffEq, Flux, Optim, Plots
 using Flux: gradient
 using Flux.Optimise: update!
+using Random
+
+n_plot = 10
+n_epoch = 100000
+n_exp = 30
 
 function trueODEfunc(dydt, y, k, t)
     dydt[1] = -2 * k[1] * y[1]^2 - k[2] * y[1]
@@ -10,16 +15,15 @@ function trueODEfunc(dydt, y, k, t)
     dydt[5] = k[4] * y[2] * y[4]
 end
 
-n_exp = 10
 ns = 5
 nr = 4
-u0_list = rand(Float64, (n_exp, ns))
+u0_list = rand(Float32, (n_exp, ns))
 u0_list[:, 3:ns] .= 0
 
 datasize = 20
-tspan = Float64[0.0, 20.0]
+tspan = Float32[0.0, 20.0]
 tsteps = range(tspan[1], tspan[2], length = datasize)
-k = Float64[0.1, 0.2, 0.13, 0.3]
+k = Float32[0.1, 0.2, 0.13, 0.3]
 alg = Rosenbrock23(autodiff = false)
 
 ode_data_list = []
@@ -49,6 +53,25 @@ function clip_p(p)
 
     return p
 end
+
+
+function set_p(p)
+    p = zeros(49)
+    p[1:4] = [2,1,0,0]
+    p[5:8] = [0,0,0,1]
+    p[9:12] = [0,0,1,0]
+    p[13:16] = [0,0,0,1]
+    p[17:20] = [0,0,0,0]
+
+    p[21:24] .= log.([0.1, 0.2, 0.13, 0.3])
+
+    p[25:29] .= [-2,  1,  0,  0, 0]
+    p[30:34] .= [-1,  0,  1,  0, 0]
+    p[35:39] .= [ 0,  0, -1,  1, 0]
+    p[40:44] .= [ 0, -1,  0, -1, 1]
+    return p
+end
+
 
 function predict_neuralode(u0, p)
     pred = clamp.(Array(prob_neuralode(u0, p)), -ub, ub)
@@ -84,86 +107,64 @@ function display_p(p)
     println(p[17:20])
 end
 
-function set_p(p)
-    p = zeros(49)
-    p[1:4] = [2,1,0,0]
-    p[5:8] = [0,0,0,1]
-    p[9:12] = [0,0,1,0]
-    p[13:16] = [0,0,0,1]
-    p[17:20] = [0,0,0,0]
-
-    p[21:24] .= log.([0.1, 0.2, 0.13, 0.3])
-
-    # layer1: 5x4+4 = 24
-    # layer2: 4x5+5 = 25
-
-    p[25:29] .= [-2,  1,  0,  0, 0]
-    p[30:34] .= [-1,  0,  1,  0, 0]
-    p[35:39] .= [ 0,  0, -1,  1, 0]
-    p[40:44] .= [ 0, -1,  0, -1, 1]
-    return p
-end
-
 # Callback function to observe training
-list_plots = []
-list_loss = []
-iter = 0
-cb = function (p, i_exp; doplot = true)
-    global list_plots, iter
 
-    p = clip_p(p)
-
-    loss, pred = loss_pred_neuralode(p, i_exp)
-
-    if iter == 0
-        list_plots = []
-    end
-    iter += 1
-
-    push!(list_loss, loss)
-
-    list_plt = []
+cbi = function (p, i_exp)
 
     ode_data = ode_data_list[i_exp]
-
-    for i in 1:5
-        plt = scatter(tsteps, ode_data[i,:], title = string(i), label = string("data",i))
-        plot!(plt, tsteps, pred[i,:], label = string("pred",i))
+    pred = predict_neuralode(u0_list[i_exp, :], p)
+    list_plt = []
+    for i in 1:ns
+        plt = scatter(tsteps, ode_data[i,:], title = string(i), label = string("data_",i))
+        plot!(plt, tsteps, pred[i,:], label = string("pred_",i))
         push!(list_plt, plt)
     end
-
-    if iter < 2000
-        plt_loss = plot(list_loss, yscale = :log10, label="loss", title = string("exp", i_exp))
-    else
-        plt_loss = plot(list_loss, xscale = :log10, yscale = :log10, label="loss", title = string("exp", i_exp))
-    end
-
-    push!(list_plt, plt_loss)
-
-    plt_all = plot(list_plt..., layout = (2,3), legend = false)
-
-    #push!(list_plots, plt_all)
-    if iter % 100 == 0 || true
-        println(string("\n", "iter = ", iter, " i_exp = ", i_exp, " loss = ", loss, "\n"))
-        display_p(p)
-        display(plt_all)
-    end
-
+    plt_all = plot(list_plt..., legend = false)
+    png(plt_all, string("figs/i_exp_", i_exp))
     return false
 end
 
+list_loss = []
+iter = 0
+cb = function (p, loss_mean)
+    global list_loss, iter
+    push!(list_loss, loss_mean)
+    println(string("\n", "iter = ", iter, " loss = ", loss_mean, "\n"))
+
+    if iter % n_plot == 0
+        display_p(p)
+
+        for i_exp in [1, 10, 20, 30]
+            cbi(p, i_exp)
+        end
+
+        if iter < 2000
+            plt_loss = plot(list_loss, yscale = :log10, label="loss")
+        else
+            plt_loss = plot(list_loss, xscale = :log10, yscale = :log10, label="loss")
+        end
+        png(plt_loss, "figs/loss")
+    end
+
+    iter += 1
+
+end
 
 opt = ADAM(0.001)
 
 p = clip_p(p)
 
-for epoch in 1:100000
+loss_all = zeros(Float32, n_exp)
+
+for epoch in 1:n_epoch
     global p, iter
-    i_exp = rand(1:n_exp)
-    grad = gradient(loss_neuralode, p, i_exp)[1]
-    update!(opt, p, grad)
-    p = clip_p(p)
-    #println(string("\n", "iter ", epoch, " i_exp ", i_exp))
-    #display_p(p)
-    cb(p, i_exp)
+    for i_exp in randperm(n_exp)
+        loss, back = Flux.pullback(loss_neuralode, p, i_exp)
+        update!(opt, p, back(one(loss))[1])
+        p = clip_p(p)
+        loss_all[i_exp] = loss
+        #println(string("epoch=", iter, " i_exp=", i_exp, " loss=", loss))
+    end
+    loss_mean = sum(loss_all)/n_exp
+    cb(p, loss_mean)
 end
