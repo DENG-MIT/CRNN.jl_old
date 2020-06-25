@@ -18,6 +18,11 @@ ns = 5
 nr = 4
 file_name = "MI_Alr001_K_n10_i5000_re"
 is_restart = false
+opt = [GradientDescent(), ADAM(0.01), Optim.KrylovTrustRegion()]
+maxiters_list = [1000, n_iter, n_iter]
+# opt = [ADAM(0.01), Optim.KrylovTrustRegion()]
+# maxiters_list = [n_iter, n_iter]
+description = "[GradientDescent(), ADAM(0.01), Optim.KrylovTrustRegion()] and [1000, n_iter, n_iter]"
 
 # ODE Grid
 datasize = 20
@@ -33,7 +38,8 @@ if is_restart == true
     u0_list = CRNN["u0_list"]
     u0_list_train = CRNN["u0_list_train"]
     iter = CRNN["iter"]
-    p0 = CRNN["p_iter"][end]
+    p_iter = CRNN["p_iter"]
+    p0 = p_iter[end]
 else
     u0_list = []
     u0_list_train = []
@@ -47,6 +53,7 @@ else
     end
     u0_list_train = shuffle(u0_list_train)
     iter = 1
+    p_iter = []
 end
 
 # True Solutions
@@ -116,7 +123,7 @@ cb = function (p, l, pred; doplot = false, save_file = true)
 
     if save_file
         savefig(plt,string("CRNN_", file_name, ".png"))
-        save(string("CRNN_", file_name, ".jld"), "p_iter", p_iter, "n_exp", n_exp, "n_iter", n_iter, "iter", iter, "u0_list", u0_list, "u0_list_train", u0_list_train)
+        save(string("CRNN_", file_name, ".jld"), "p_iter", p_iter, "n_exp", n_exp, "n_iter", n_iter, "iter", iter, "u0_list", u0_list, "u0_list_train", u0_list_train, "discription", description)
     end
 
     iter += 1
@@ -126,11 +133,6 @@ cb = function (p, l, pred; doplot = false, save_file = true)
     return false
 end
 
-p_iter = []
-opt = [GradientDescent(), ADAM(0.01), Optim.KrylovTrustRegion()]
-maxiters_list = [1000, n_iter, n_iter]
-# opt = [ADAM(0.01), Optim.KrylovTrustRegion()]
-# maxiters_list = [n_iter, n_iter]
 for (i, opt_current) in enumerate(opt)
     p_temp = DiffEqFlux.sciml_train(loss_neuralode, p0, opt_current, u0_list_train, cb = cb, maxiters = maxiters_list[i]).minimizer
     push!(p_iter, p_temp)
