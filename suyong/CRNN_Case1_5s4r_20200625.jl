@@ -22,7 +22,7 @@ opt = [GradientDescent(), ADAM(0.01), Optim.KrylovTrustRegion()]
 maxiters_list = [1000, n_iter, n_iter]
 # opt = [ADAM(0.01), Optim.KrylovTrustRegion()]
 # maxiters_list = [n_iter, n_iter]
-description = "[GradientDescent(), ADAM(0.01), Optim.KrylovTrustRegion()] and [1000, n_iter, n_iter]"
+description = string(opt,maxiters_list)
 
 # ODE Grid
 datasize = 20
