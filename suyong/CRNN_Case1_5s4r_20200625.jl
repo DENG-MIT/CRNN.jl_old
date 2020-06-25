@@ -21,7 +21,7 @@ is_restart = false
 # opt = [GradientDescent(), ADAM(0.01), Optim.KrylovTrustRegion()]
 # maxiters_list = [100, n_iter, n_iter]
 opt = [ADAM(0.001), Optim.KrylovTrustRegion()]
-maxiters_list = [n_iter, n_iter]
+maxiters_list = [n_train, n_train]
 description = string(opt, "Iterations: ", maxiters_list)
 
 # ODE Grid
