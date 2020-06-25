@@ -16,12 +16,12 @@ n_iter = 5000
 n_train = n_exp*n_iter
 ns = 5
 nr = 4
-file_name = "MI_Alr001_K_n10_i5000_re"
+file_name = "MI_Alr0001_K_n10_i5000_clip"
 is_restart = false
-opt = [GradientDescent(), ADAM(0.01), Optim.KrylovTrustRegion()]
-maxiters_list = [1000, n_iter, n_iter]
-# opt = [ADAM(0.01), Optim.KrylovTrustRegion()]
-# maxiters_list = [n_iter, n_iter]
+# opt = [GradientDescent(), ADAM(0.01), Optim.KrylovTrustRegion()]
+# maxiters_list = [100, n_iter, n_iter]
+opt = [ADAM(0.001), Optim.KrylovTrustRegion()]
+maxiters_list = [n_iter, n_iter]
 description = string(opt, "Iterations: ", maxiters_list)
 
 # ODE Grid
@@ -90,7 +90,7 @@ function clip_p(p)
 
     return p
 end
-# p0 = clip_p(p0)
+p0 = clip_p(p0)
 
 # Callback function to observe training
 list_plots = []
@@ -121,14 +121,14 @@ cb = function (p, l, pred; doplot = false, save_file = true)
         display(plot(plt))
     end
 
-    if save_file
+    if save_file && rem(iter,50)==0
         savefig(plt,string("CRNN_", file_name, ".png"))
         save(string("CRNN_", file_name, ".jld"), "p_iter", p_iter, "n_exp", n_exp, "n_iter", n_iter, "iter", iter, "u0_list", u0_list, "u0_list_train", u0_list_train, "discription", description)
     end
 
     iter += 1
     
-#    p = clip_p(p)
+    p = clip_p(p)
 
     return false
 end
