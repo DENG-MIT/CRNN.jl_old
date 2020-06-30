@@ -3,7 +3,7 @@ using Flux: gradient
 using Flux.Optimise: update!
 using Random
 using BSON: @save, @load
-using Distributed
+using Distributed: pmap
 
 n_plot = 10
 n_epoch = 1000000
@@ -137,7 +137,7 @@ cb = function (p, loss_mean)
         println(string("\n", "iter = ", iter, " loss = ", loss_mean, "\n"))
         display_p(p)
 
-        @pmap([1, 10, 20, 30]) do i_exp
+        pmap([1, 10, 20, 30]) do i_exp
             cbi(p, i_exp)
         end
 

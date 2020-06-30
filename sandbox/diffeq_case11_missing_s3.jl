@@ -7,30 +7,47 @@ using Distributed: pmap
 
 n_plot = 10
 n_epoch = 100000
-n_exp = 300
+n_exp = 10
 
-model_dir = "fig_missing_s3/"
+model_dir = "fig_missing_s3_case11/"
 
 function trueODEfunc(dydt, y, k, t)
-    dydt[1] = -2 * k[1] * y[1]^2 - k[2] * y[1]
-    dydt[2] = k[1] * y[1]^2 - k[4] * y[2] * y[4]
-    dydt[3] = k[2] * y[1] - k[3] * y[3]
-    dydt[4] = k[3] * y[3] - k[4] * y[2] * y[4]
-    dydt[5] = k[4] * y[2] * y[4]
+    SC = zeros(Float32, (7, 5))
+    SC[1, :] .= [-2,  1,  0,  0,  0]
+    SC[2, :] .= [-1, -1,  1,  0,  0]
+    SC[3, :] .= [ 1, -1, -1,  1,  0]
+    SC[4, :] .= [ 0,  1, -1, -1,  1]
+    SC[5, :] .= [ 1,  1, -1,  0,  0]
+    SC[6, :] .= [-1,  1,  1, -1,  0]
+    SC[7, :] .= [ 0, -1,  1,  1, -1]
+
+    R = zeros(Float32, 7)
+    R[1] = k[1] * y[1]^2
+    R[2] = k[2] * y[1] * y[2]
+    R[3] = k[3] * y[2] * y[3]
+    R[4] = k[4] * y[3] * y[4]
+    R[5] = k[5] * y[1] * y[2]
+    R[6] = k[6] * y[1] * y[4]
+    R[7] = k[7] * y[2] * y[5]
+
+    display(y)
+    dydt = SC' * R
+    display("dxdt")
+    display(dydt)
 end
 
 ns = 5
-nr = 4
+nr = 7
 u0_list = rand(Float32, (n_exp, ns))
-u0_list[:, 1] .= u0_list[:, 1] .* 4.5 .+ 0.5
+u0_list[:, 1] .= u0_list[:, 1] .* 1.5 .+ 0.5
 u0_list[:, 3:5] .= 0
 
-datasize = 40
-tspan = Float32[0.0, 40.0]
+datasize = 100
+tspan = Float32[0.0, 100.0]
 tsteps = range(tspan[1], tspan[2], length = datasize)
-k = Float32[0.1, 0.2, 0.13, 0.3]
-#alg = Rosenbrock23(autodiff = false)
-alg = Tsit5()
+k = Float32[0.1, 0.2, 0.13, 0.3, 0.0, 0.0, 0.0]
+alg = Rosenbrock23(autodiff = false)
+# alg = Tsit5()
 #alg = AutoTsit5(Rosenbrock23(autodiff = false))
 
 ode_data_list = []
@@ -89,7 +106,7 @@ function loss_neuralode(p, i_exp)
     ode_data = ode_data_list[i_exp]
     pred = predict_neuralode(u0, p)
     loss = sum(abs2, (ode_data .- pred)[[1,2,4,5], :])
-    loss = loss + sum(abs2, pred .* (pred .< 0.0))
+    loss = loss + sum(abs2, pred .* (pred .< 0.0)) * 1e3
     return loss
 end
 
@@ -98,7 +115,7 @@ function loss_pred_neuralode(p, i_exp)
     ode_data = ode_data_list[i_exp]
     pred = predict_neuralode(u0, p)
     loss = sum(abs2, (ode_data .- pred)[[1,2,4,5], :])
-    loss = loss + sum(abs2, pred .* (pred .< 0.0))
+    loss = loss + sum(abs2, pred .* (pred .< 0.0)) * 1e3
     return loss, pred
 end
 
@@ -138,7 +155,7 @@ cb = function (p, loss_mean)
         println(string("\n", "iter = ", iter, " loss = ", loss_mean, "\n"))
         display_p(p)
 
-        pmap(1:50:n_exp) do i_exp
+        pmap(1:1:n_exp) do i_exp
             cbi(p, i_exp)
         end
 
