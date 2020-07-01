@@ -49,7 +49,7 @@ else
        u0_temp[1,3:ns] .= 0
        push!(u0_list, u0_temp)
        for j in 1:n_iter
-           push!(u0_list_train, u0_temp)
+#           push!(u0_list_train, u0_temp)
            push!(u0_list_train, shuffle(u0_temp))
        end
    end
