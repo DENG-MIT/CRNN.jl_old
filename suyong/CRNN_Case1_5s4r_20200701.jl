@@ -50,7 +50,7 @@ else
        push!(u0_list, u0_temp)
        for j in 1:n_iter
            push!(u0_list_train, u0_temp)
-#           push!(u0_list_train, shuffle(u0_temp))
+           push!(u0_list_train, shuffle(u0_temp))
        end
    end
 #    u0_list_train = shuffle(u0_list_train)
@@ -160,12 +160,12 @@ cb = function (p, l, pred; doplot = false, save_file = true)
         display(plot(plt))
     end
 
-    if save_file && rem(iter,50) == 0
-        savefig(plt,string("CRNN_", file_name, ".png"))
-    elseif save_file && rem(iter,500) == 0
+    if save_file && rem(iter,500) == 0
         push!(p_iter, p)
         savefig(plt,string("CRNN_", file_name, ".png"))
         save(string("CRNN_", file_name, ".jld"), "p_iter", p_iter, "p_current", p, "n_exp", n_exp, "n_iter", n_iter, "iter", iter, "u0_list", u0_list, "u0_list_train", u0_list_train, "discription", description)
+    elseif save_file && rem(iter,50) == 0
+        savefig(plt,string("CRNN_", file_name, ".png"))
     end
 
     iter += 1
