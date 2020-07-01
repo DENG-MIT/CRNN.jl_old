@@ -16,7 +16,7 @@ n_iter = 2000
 n_train = n_exp*n_iter
 ns = 5
 nr = 4
-initial_species = [1,2]
+# initial_species = [1,2]
 file_name = "MI_Alr001_n10_i2000_cliping_shuffle"
 is_restart = false
 # opt = [GradientDescent(), ADAM(0.01), Optim.KrylovTrustRegion()]
@@ -44,16 +44,14 @@ if is_restart == true
 else
     u0_list = []
     u0_list_train = []
-   for i in 1:n_exp
+    for i in 1:n_exp
        u0_temp = rand(Uniform(), (1,ns))
        u0_temp[1,3:ns] .= 0
        push!(u0_list, u0_temp)
-       for j in 1:n_iter
-#           push!(u0_list_train, u0_temp)
-           push!(u0_list_train, shuffle(u0_temp))
-       end
-   end
-#    u0_list_train = shuffle(u0_list_train)
+    end
+    for i in 1:n_iter
+        global u0_list_train = vcat(u0_list_train,shuffle(u0_list))
+    end
     iter = 1
     p_iter = []
 end
@@ -106,36 +104,36 @@ track_loss = []
 cb = function (p, l, pred; doplot = false, save_file = true)
     global list_plots, iter, track_loss, u0_list, u0_list_train, ode_data
 
-    i = findall(x->x==u0_list_train[iter],u0_list)[1]
-    ode_data_temp = ode_data[i]
     append!(track_loss, l)
-    push!(p_iter, p)
 
-    # plot current prediction against data
-    plt0 = plot(track_loss, yscale = :log10)
-    plt1 = scatter(tsteps, ode_data_temp[1,:], label = "data")
-    scatter!(plt1, tsteps, pred[1,:], label = "prediction")
-    plt2 = scatter(tsteps, ode_data_temp[2,:], label = "data")
-    scatter!(plt2, tsteps, pred[2,:], label = "prediction")
-    plt3 = scatter(tsteps, ode_data_temp[3,:], label = "data")
-    scatter!(plt3, tsteps, pred[3,:], label = "prediction")
-    plt4 = scatter(tsteps, ode_data_temp[4,:], label = "data")
-    scatter!(plt4, tsteps, pred[4,:], label = "prediction")
-    plt5 = scatter(tsteps, ode_data_temp[5,:], label = "data")
-    scatter!(plt5, tsteps, pred[5,:], label = "prediction")
-    plt = plot(plt0, plt1, plt2, plt3, plt4, plt5, layout=(2,3))
-    push!(list_plots, plt)
+    # if doplot
+    #     display(plot(plt))
+    # end
 
-    if doplot
-        display(plot(plt))
+    if save_file && rem(iter,100) == 0
+        i = findall(x->x==u0_list_train[iter],u0_list)[1]
+        ode_data_temp = ode_data[i]
+
+        # plot current prediction against data
+        plt0 = plot(track_loss, xscale = :log10, yscale = :log10)
+        plt1 = scatter(tsteps, ode_data_temp[1,:], label = "data")
+        plot!(plt1, tsteps, pred[1,:], label = "prediction")
+        plt2 = scatter(tsteps, ode_data_temp[2,:], label = "data")
+        plot!(plt2, tsteps, pred[2,:], label = "prediction")
+        plt3 = scatter(tsteps, ode_data_temp[3,:], label = "data")
+        plot!(plt3, tsteps, pred[3,:], label = "prediction")
+        plt4 = scatter(tsteps, ode_data_temp[4,:], label = "data")
+        plot!(plt4, tsteps, pred[4,:], label = "prediction")
+        plt5 = scatter(tsteps, ode_data_temp[5,:], label = "data")
+        plot!(plt5, tsteps, pred[5,:], label = "prediction")
+        plt = plot(plt0, plt1, plt2, plt3, plt4, plt5, layout=(2,3))
+        push!(list_plots, plt)
+        savefig(plt,string("CRNN_", file_name, ".png"))
     end
 
     if save_file && rem(iter,500) == 0
         push!(p_iter, p)
-        savefig(plt,string("CRNN_", file_name, ".png"))
         save(string("CRNN_", file_name, ".jld"), "p_iter", p_iter, "p_current", p, "n_exp", n_exp, "n_iter", n_iter, "iter", iter, "u0_list", u0_list, "u0_list_train", u0_list_train, "discription", description)
-    elseif save_file && rem(iter,50) == 0
-        savefig(plt,string("CRNN_", file_name, ".png"))
     end
 
     iter += 1
