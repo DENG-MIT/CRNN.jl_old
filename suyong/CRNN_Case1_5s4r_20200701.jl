@@ -58,36 +58,6 @@ else
     p_iter = []
 end
 
-# # Initial Conditions
-# if is_restart == true
-#     CRNN = load(string("CRNN_", file_name, ".jld"))
-#     u0_list = CRNN["u0_list"]
-#     u0_list_train = CRNN["u0_list_train"]
-#     iter = CRNN["iter"]
-#     p_iter = CRNN["p_iter"]
-#     p = p_iter[end]
-# else
-#     u0_list = Array{Float64}(undef, 0, 0)
-#     u0_list_train = Array{Float64}(undef, 0, 0)
-#     for i in 1:ns
-#         global u0_list
-#         if i in initial_species
-#             u0_list = vcat(u0_list, rand(Uniform(), n_exp))
-#         else
-#             u0_list = vcat(u0_list, zeros(Float64, n_exp))
-#         end
-#     end
-#     for i in 1:n_iter
-#         global u0_list_train
-#         u0_list_train = vcat(u0_list_train, u0_list)
-#     end
-# #    u0_list = [u0_list]'
-# #    u0_list_train = u0_list_train'
-# #    u0_list_train = shuffle(u0_list_train)
-#     iter = 1
-#     p_iter = []
-# end
-
 # True Solutions
 ode_data = Any[]
 for (i,u) in enumerate(u0_list)
