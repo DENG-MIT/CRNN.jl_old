@@ -11,13 +11,13 @@ end
 k = Float32[0.1, 0.2, 0.13, 0.3]
 
 # User Settings
-n_exp = 50
-n_iter = 2000
+n_exp = 5
+n_iter = 200
 n_train = n_exp*n_iter
 ns = 5
 nr = 4
 # initial_species = [1,2]
-file_name = "Alr001_Alr0001_n50_i2000_noise"
+file_name = "Alr001_Alr0001_n5_i200_noise"
 is_restart = false
 # opt = [GradientDescent(), ADAM(0.01), Optim.KrylovTrustRegion()]
 # maxiters_list = [100, n_iter, n_iter]
@@ -115,10 +115,11 @@ cb = function (p, l, pred; doplot = false, save_file = true)
     # end
 
     if save_file && rem(iter,100) == 0
-        global iter_loop = iter
-        for i in maxiters_list
-            if iter_loop > i
-                iter_loop -= i
+        for (i,maxiter) in enumerate(maxiters_list)
+            if i == 1
+                global iter_loop = iter
+            else
+                iter_loop -= maxiter
             end
         end
         i = findall(x->x==u0_list_train[iter_loop],u0_list)[1]
